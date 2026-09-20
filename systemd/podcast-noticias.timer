@@ -1,6 +1,6 @@
 [Unit]
 Description=Temporizador Semanal para Noticias de Software Libre de la Semana (Sábados 03:00 ART)
-Requires=podcast-noticias.service
+
 
 [Timer]
 # Se ejecuta todos los sábados a las 03:00 AM (hora de Argentina = 06:00 UTC)
