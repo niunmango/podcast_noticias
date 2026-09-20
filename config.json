@@ -1,0 +1,46 @@
+{
+  "llm": {
+    "base_url": "http://192.168.1.200:20128/v1",
+    "api_key": "sk-625c35c6ebef3fea-bhqllm-9dad3943",
+    "model": "hermes-rotator",
+    "temperature": 0.7,
+    "target_words_min": 750,
+    "target_words_max": 850
+  },
+  "tts": {
+    "ssh_host": "170.210.80.248",
+    "ssh_port": 9022,
+    "ssh_user": "golem",
+    "remote_dir": "/home/golem/ramiro/clonvoz",
+    "remote_script": "generar.sh",
+    "remote_log": "salida.log",
+    "remote_output_wav": "podcast_completo.wav",
+    "poll_interval_seconds": 15,
+    "timeout_seconds": 1800
+  },
+  "rss": {
+    "days_limit": 7,
+    "feeds": [
+      { "name": "Phoronix", "url": "https://www.phoronix.com/rss.php" },
+      { "name": "LWN", "url": "https://lwn.net/headlines/newrss" },
+      { "name": "OMG! Ubuntu", "url": "https://www.omgubuntu.co.uk/feed" },
+      { "name": "GamingOnLinux", "url": "https://www.gamingonlinux.com/article_rss.php" },
+      { "name": "9to5Linux", "url": "https://9to5linux.com/feed" },
+      { "name": "It's FOSS", "url": "https://itsfoss.com/feed/" },
+      { "name": "Linux Today", "url": "https://www.linuxtoday.com/feed/" },
+      { "name": "MuyLinux", "url": "https://www.muylinux.com/feed/" }
+    ]
+  },
+  "audio": {
+    "loudnorm": "loudnorm=I=-16:TP=-1.0:LRA=11",
+    "sample_rate": 44100,
+    "bitrate": "192k",
+    "trim_silence": false
+  },
+  "paths": {
+    "prompts_dir": "prompts",
+    "system_prompt": "prompts/system_prompt.txt",
+    "output_scripts": "output/scripts",
+    "output_audio": "output/audio"
+  }
+}

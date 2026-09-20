@@ -1,0 +1,21 @@
+# Python Virtual Environment
+venv/
+.venv/
+env/
+
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs & Temporary files
+*.log
+.DS_Store
+
+# Audio and script artifacts (keep directory structure)
+output/audio/*.wav
+output/audio/*.mp3
+output/scripts/*.txt
+output/scripts/*.md
+!output/audio/.gitkeep
+!output/scripts/.gitkeep
