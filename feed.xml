@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
+  <channel>
+    <title>Podcast Semanal Linux &amp; Open Source</title>
+    <link>https://github.com/niunmango/podcast_noticias</link>
+    <language>es</language>
+    <copyright>© 2026 Ramiro</copyright>
+    <itunes:author>Ramiro</itunes:author>
+    <description>Resumen semanal técnico y directo de las novedades más importantes del kernel Linux, distribuciones de escritorio, aplicaciones libres y el ecosistema gaming open source.</description>
+    <itunes:summary>Resumen semanal técnico y directo de las novedades más importantes del kernel Linux, distribuciones de escritorio, aplicaciones libres y el ecosistema gaming open source.</itunes:summary>
+    <itunes:type>episodic</itunes:type>
+    <itunes:owner>
+      <itunes:name>Ramiro</itunes:name>
+      <itunes:email>ramiro.gp@gmail.com</itunes:email>
+    </itunes:owner>
+    <itunes:image href="https://raw.githubusercontent.com/niunmango/podcast_noticias/main/podcast_cover.jpg" />
+    <image>
+      <url>https://raw.githubusercontent.com/niunmango/podcast_noticias/main/podcast_cover.jpg</url>
+      <title>Podcast Semanal Linux &amp; Open Source</title>
+      <link>https://github.com/niunmango/podcast_noticias</link>
+    </image>
+    <itunes:category text="Technology">
+      <itunes:category text="Tech News" />
+    </itunes:category>
+    <itunes:explicit>false</itunes:explicit>
+    <item>
+      <title>EP20260920 - Kernel 7.3-rc4, Ubuntu 26.10 OOM, gzip 1.15 Zstd y KDE Roadmap</title>
+      <itunes:title>Kernel 7.3-rc4, Ubuntu 26.10 OOM, gzip 1.15 Zstd y KDE Roadmap</itunes:title>
+      <itunes:episodeType>full</itunes:episodeType>
+      <description>Resumen semanal: parches x86 y Btrfs en Linux 7.3-rc4, optimizaciones de I/O en 7.4, Ubuntu 26.10 con gestión inteligente de memoria OOM, Clonezilla 3.3.3 con LUKS2, gzip 1.15 y novedades de Vulkan y Wine para gaming.
+
+#Linux #OpenSource #Kernel #Ubuntu #GamingOnLinux</description>
+      <itunes:summary>Resumen semanal: parches x86 y Btrfs en Linux 7.3-rc4, optimizaciones de I/O en 7.4, Ubuntu 26.10 con gestión inteligente de memoria OOM, Clonezilla 3.3.3 con LUKS2, gzip 1.15 y novedades de Vulkan y Wine para gaming.</itunes:summary>
+      <enclosure url="https://github.com/niunmango/podcast_noticias/releases/download/EP20260920/podcast_20260920_184428.mp3" length="8047045" type="audio/mpeg" />
+      <guid isPermaLink="false">https://github.com/niunmango/podcast_noticias/releases/tag/EP20260920</guid>
+      <pubDate>Sun, 20 Sep 2026 19:31:01 GMT</pubDate>
+      <itunes:duration>335</itunes:duration>
+      <itunes:image href="https://github.com/niunmango/podcast_noticias/releases/download/EP20260920/cover_20260920_192905.jpg" />
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+  </channel>
+</rss>
