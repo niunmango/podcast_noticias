@@ -1,5 +1,5 @@
 [Unit]
-Description=Temporizador Semanal para Generar y Publicar Podcast Linux & Open Source (Sábados 03:00 ART)
+Description=Temporizador Semanal para Noticias de Software Libre de la Semana (Sábados 03:00 ART)
 Requires=podcast-noticias.service
 
 [Timer]

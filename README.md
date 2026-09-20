@@ -1,6 +1,7 @@
-# Pipeline Automatizado de Podcast: Linux & Open Source
+# Noticias de Software Libre de la Semana
 
-Pipeline modular en Python para la generación automática de episodios semanales de podcast sobre el ecosistema Linux, kernel y software libre. Integra ingesta y filtrado de feeds RSS, generación de guiones mediante LLM local con estilo técnico rioplatense, síntesis de voz neuronal en GPU remota y post-procesamiento/masterización de audio según estándares profesionales de podcasting (EBU R128).
+Pipeline modular en Python para la generación automática y publicación semanal del podcast **"Noticias de Software Libre de la Semana"**, abordando las novedades más importantes del ecosistema Linux, el kernel y el software libre. Integra ingesta y filtrado de feeds RSS, redacción de guión con LLM local en estilo técnico rioplatense (sin "che"), síntesis de voz neuronal en GPU remota y masterización profesional de audio (EBU R128 a -16 LUFS con música de fondo).
+
 
 ---
 

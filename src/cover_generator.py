@@ -43,7 +43,7 @@ class CoverGenerator:
 
         if bold_path and reg_path:
             return {
-                "header": ImageFont.truetype(bold_path, int(28 * scale)),
+                "header": ImageFont.truetype(bold_path, int(24 * scale)),
                 "badge": ImageFont.truetype(bold_path, int(32 * scale)),
                 "title": ImageFont.truetype(bold_path, int(52 * scale)),
                 "title_small": ImageFont.truetype(bold_path, int(42 * scale)),
@@ -131,7 +131,7 @@ class CoverGenerator:
 
         # 3. Cabecera
         header_y = int(60 * scale)
-        header_text = "PODCAST LINUX & OPEN SOURCE"
+        header_text = "NOTICIAS DE SOFTWARE LIBRE DE LA SEMANA"
         draw.text((margin, header_y), header_text, font=fonts["header"], fill=(220, 238, 255, 240))
         # Línea cian de acento
         line_y = header_y + int(48 * scale)

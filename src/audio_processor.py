@@ -138,9 +138,9 @@ if __name__ == "__main__":
 
     processor = AudioProcessor(trim_silence=args.trim_silence)
     meta = {
-        "title": "Podcast Linux & Open Source",
+        "title": "Noticias de Software Libre de la Semana",
         "artist": "Pipeline Automatizado",
-        "album": "Noticias Semanales",
+        "album": "Noticias de Software Libre de la Semana",
         "genre": "Podcast",
     }
     processor.process_podcast(Path(args.input), Path(args.output), metadata=meta)

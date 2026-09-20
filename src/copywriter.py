@@ -56,7 +56,7 @@ class Copywriter:
         """
         system_prompt = (
             "Sos un especialista en comunicación técnica, podcasting y posicionamiento SEO de contenidos sobre Linux y Software Libre.\n"
-            "Tu tarea es generar el título, descripción y hashtags para la publicación de un episodio semanal de podcast.\n"
+            "Tu tarea es generar el título, descripción y hashtags para la publicación de un episodio semanal del podcast 'Noticias de Software Libre de la Semana'.\n"
             "La descripción debe resumir con claridad técnica y atractivo los temas principales tratados (Kernel, Desktop/Distro, Aplicaciones Libres y Gaming).\n"
             "Formato de respuesta OBLIGATORIO y EXACTO:\n"
             "TÍTULO: [Título atractivo y concreto, máx 75 caracteres]\n"
@@ -122,7 +122,7 @@ class Copywriter:
         # Fallbacks si el modelo varió el formato
         if not title:
             first_line = raw_text.strip().split("\n")[0]
-            title = re.sub(r"^(?:TÍTULO:?|Title:?)\s*", "", first_line).strip() or "Podcast Linux & Open Source"
+            title = re.sub(r"^(?:TÍTULO:?|Title:?)\s*", "", first_line).strip() or "Noticias de Software Libre de la Semana"
         if not desc:
             desc = raw_text[:300].strip()
         if not tags:

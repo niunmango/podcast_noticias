@@ -1,5 +1,5 @@
 [Unit]
-Description=Generador y Publicador Semanal de Podcast Linux & Open Source
+Description=Generador y Publicador de Noticias de Software Libre de la Semana
 After=network-online.target
 Wants=network-online.target
 

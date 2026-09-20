@@ -71,7 +71,7 @@ def run_pipeline(
 
     console.print(
         Panel.fit(
-            "[bold cyan]🎙️ PIPELINE AUTOMATIZADO DE PODCAST LINUX & OPEN SOURCE[/bold cyan]\n"
+            "[bold cyan]🎙️ NOTICIAS DE SOFTWARE LIBRE DE LA SEMANA - PIPELINE AUTOMATIZADO[/bold cyan]\n"
             f"[dim]Inicio: {start_time.strftime('%Y-%m-%d %H:%M:%S UTC')} | Modo: {'Dry-Run' if dry_run else ('Voice-Only' if voice_only else 'Completo')}[/dim]",
             border_style="cyan",
         )
@@ -227,7 +227,7 @@ def run_pipeline(
     metadata = {
         "title": meta.title,
         "artist": "Pipeline Automatizado",
-        "album": "Podcast Semanal Linux & Open Source",
+        "album": "Noticias de Software Libre de la Semana",
         "date": start_time.strftime("%Y"),
         "genre": "Podcast",
         "comment": meta.description[:250],

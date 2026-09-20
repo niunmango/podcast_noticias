@@ -240,7 +240,7 @@ class Publisher:
         self.feed_url = self.env.get("FEED_URL", f"https://{self.repo.split('/')[0]}.github.io/{self.repo.split('/')[1]}/feed.xml")
         self.author = self.env.get("AUTHOR_NAME", "Ramiro")
         self.email_addr = self.env.get("AUTHOR_EMAIL", "ramiro.gp@gmail.com")
-        self.podcast_title = self.env.get("PODCAST_TITLE", "Podcast Semanal Linux & Open Source")
+        self.podcast_title = self.env.get("PODCAST_TITLE", "Noticias de Software Libre de la Semana")
         self.podcast_desc = self.env.get(
             "PODCAST_DESC",
             "Resumen semanal técnico y directo de las novedades del kernel Linux, distribuciones de escritorio, aplicaciones libres y gaming open source.",
