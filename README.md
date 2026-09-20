@@ -55,13 +55,23 @@ podcast_noticias/
 │   └── system_prompt.txt       # Prompt del sistema para el LLM (tono rioplatense, reglas TTS)
 ├── src/
 │   ├── __init__.py
-│   ├── rss_collector.py        # Ingesta, parseo y filtrado temporal de feeds RSS
-│   ├── script_generator.py     # Cliente OpenAI/LLM, formateo y limpieza de guión
+│   ├── rss_collector.py        # Ingesta, parseo y filtrado de noticias en 4 líneas
+│   ├── script_generator.py     # Redactor de guión (~6 min, sin "che") con LLM local
+│   ├── copywriter.py           # Generador de título, descripción y hashtags SEO
+│   ├── cover_generator.py      # Generador de portadas oficiales (1400x1400px JPEG)
 │   ├── remote_tts_client.py    # Cliente SSH/SFTP para orquestar ClonVoz en servidor .248
-│   └── audio_processor.py      # Normalización EBU R128 y masterización con FFmpeg
+│   ├── audio_processor.py      # Mezcla de música y normalización EBU R128 (-16 LUFS)
+│   └── publisher.py            # Publicador a GitHub Releases y generador de feed.xml
+├── systemd/
+│   ├── podcast-noticias.service# Servicio systemd de usuario para ejecución desatendida
+│   └── podcast-noticias.timer  # Temporizador systemd (Sábados 03:00 ART)
 ├── output/
 │   ├── scripts/                # Guiones generados (.txt y .md)
-│   └── audio/                  # Archivos de audio temporales (WAV) y masterizados (MP3)
+│   ├── audio/                  # Archivos de audio temporales (WAV) y masterizados (MP3)
+│   ├── covers/                 # Portadas generadas para cada episodio (.jpg)
+│   └── metadata/               # Título, descripción y hashtags por episodio (.txt/.json)
+├── feed.xml                    # Feed RSS público para Spotify / Apple Podcasts
+├── podcast_cover.jpg           # Portada principal del canal en GitHub Pages
 └── README.md
 ```
 
@@ -113,42 +123,49 @@ El archivo `config.json` centraliza todos los parámetros del pipeline:
 
 ## 🎙️ Uso del CLI (`main.py`)
 
-### 1. Ejecución Completa (End-to-End)
-Descarga las noticias de los últimos 7 días, genera el guión en prosa rioplatense, lo sintetiza en el servidor `.248` y genera el MP3 normalizado:
+### 1. Ejecución Completa (End-to-End con Publicación)
+Descarga las noticias de los últimos 7 días, redacta el guión en prosa rioplatense (4 líneas temáticas), genera portada y metadatos SEO, sintetiza la voz en el servidor `.248`, masteriza el audio con música de fondo, sube el release a GitHub y actualiza el feed RSS en GitHub Pages:
+
+```bash
+python3 main.py --publish
+```
+
+### 2. Ejecución Local (Sin Publicar)
+Genera el guión, portada, metadatos y audio MP3 masterizado en la máquina local, sin subir a GitHub:
 
 ```bash
 python3 main.py
 ```
 
-### 2. Modo Dry-Run (Solo Guión)
-Recopila noticias y genera el guión en `output/scripts/`, sin invocar la GPU remota ni sintetizar audio:
+### 3. Modo Dry-Run (Solo Guión, Portada y Metadatos)
+Recopila noticias, redacta el guión, genera la portada 1400x1400px y la descripción SEO en `output/`, sin invocar la GPU remota ni sintetizar audio:
 
 ```bash
 python3 main.py --dry-run
 ```
 
-### 3. Modo Voice-Only (Sintetizar Guión Existente)
+### 4. Modo Voice-Only (Sintetizar Guión Existente)
 Permite sintetizar y masterizar un guión ya generado o editado manualmente:
 
 ```bash
 python3 main.py --voice-only output/scripts/podcast_20260920_183141.txt
 ```
 
-### 4. Prueba Rápida de Conexión TTS
+### 5. Prueba Rápida de Conexión TTS
 Verifica la conectividad SSH y la disponibilidad de la carpeta `clonvoz` en el servidor `.248`:
 
 ```bash
 python3 main.py --test-tts
 ```
 
-### 5. Parámetros de Ventana Temporal
+### 6. Parámetros de Ventana Temporal
 Simular una fecha de corte o variar los días de recopilación:
 
 ```bash
 python3 main.py --date-offset 2026-09-15 --days 5
 ```
 
-### 6. Control de Música de Fondo
+### 7. Control de Música de Fondo
 Por defecto se utiliza `assets/background.mp3` al 8% de volumen. Es posible personalizar la pista o desactivarla:
 
 ```bash
@@ -161,52 +178,46 @@ python3 main.py --bg-music /ruta/a/mi_musica.mp3
 
 ---
 
-## 🕒 Automatización (Programación Semanal)
+## 🚀 Publicación y Distribución Oficial
 
-Para ejecutar el podcast de manera automática todos los domingos a las 20:00:
+El módulo `src/publisher.py`, en conjunto con `src/copywriter.py` y `src/cover_generator.py`, automatiza la distribución del podcast:
 
-### Opción A: Crontab
+1. **Copywriting con LLM (`src/copywriter.py`)**: Analiza el guión final y genera:
+   - Título atractivo y conciso para el episodio.
+   - Descripción completa (<200 palabras) cubriendo las 4 líneas temáticas.
+   - Hashtags optimizados para redes y agregadores.
+2. **Generación de Portada (`src/cover_generator.py`)**: Renderiza con Pillow una carátula oficial de 1400x1400 px a 300 DPI con gradiente tecnológico, isotipo, badge de edición semanal y título tipográfico con contraste optimizado.
+3. **GitHub Releases (`src/publisher.py`)**: Sube el binario MP3 masterizado y la portada JPEG a una Release oficial de GitHub bajo el tag `EPYYYYMMDD`.
+4. **Feed RSS 2.0 & GitHub Pages**:
+   - Genera/actualiza `feed.xml` con soporte completo para estándares de Apple Podcasts y Spotify (`itunes:duration`, `itunes:image`, `enclosure` apuntando a GitHub Releases, `guid`, etc.).
+   - Hace commit y push automático a la rama `main` del repositorio, sirviendo el feed a través de GitHub Pages.
+   - **URL Pública del Feed RSS**: `https://niunmango.github.io/podcast_noticias/feed.xml`
+
+---
+
+## 🕒 Automatización (Systemd User Timer)
+
+El pipeline está configurado para ejecutarse y publicarse desatendidamente todos los **sábados a las 03:00 AM (hora de Argentina = 06:00 UTC)** utilizando un temporizador de usuario de systemd.
+
+Las unidades residen en `systemd/` del repositorio y se instalan en `~/.config/systemd/user/`:
+
+- `podcast-noticias.service`: Invoca `main.py --publish` utilizando el entorno virtual de Python.
+- `podcast-noticias.timer`: Programa la ejecución con `OnCalendar=Sat *-*-* 03:00:00 America/Argentina/Buenos_Aires` y `Persistent=true`.
+
+### Gestión del Timer
+
 ```bash
-crontab -e
-```
-Añadir la siguiente línea:
-```cron
-0 20 * * 0 cd /home/ramiro/podcast_noticias && ./venv/bin/python3 main.py >> output/cron.log 2>&1
-```
+# Ver estado del temporizador y próxima ejecución
+systemctl --user status podcast-noticias.timer
 
-### Opción B: Systemd Timer
-Crear servicio `/etc/systemd/system/podcast-pipeline.service`:
-```ini
-[Unit]
-Description=Generador Semanal de Podcast Linux & Open Source
-After=network.target
+# Listar temporizadores de usuario activos
+systemctl --user list-timers podcast-noticias.timer
 
-[Service]
-Type=oneshot
-User=ramiro
-WorkingDirectory=/home/ramiro/podcast_noticias
-ExecStart=/home/ramiro/podcast_noticias/venv/bin/python3 main.py
-StandardOutput=journal
-StandardError=journal
-```
+# Ejecutar manualmente una vez para probar el servicio desatendido
+systemctl --user start podcast-noticias.service
 
-Crear timer `/etc/systemd/system/podcast-pipeline.timer`:
-```ini
-[Unit]
-Description=Ejecutar pipeline de podcast semanalmente
-
-[Timer]
-OnCalendar=Sun *-*-* 20:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-```
-
-Habilitar el timer:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now podcast-pipeline.timer
+# Inspeccionar logs de ejecución en tiempo real
+journalctl --user -u podcast-noticias.service -f
 ```
 
 ---

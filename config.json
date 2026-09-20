@@ -43,6 +43,8 @@
     "prompts_dir": "prompts",
     "system_prompt": "prompts/system_prompt.txt",
     "output_scripts": "output/scripts",
-    "output_audio": "output/audio"
+    "output_audio": "output/audio",
+    "output_covers": "output/covers",
+    "output_metadata": "output/metadata"
   }
 }

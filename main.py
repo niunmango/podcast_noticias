@@ -22,6 +22,9 @@ from src.rss_collector import collect_news, NewsBatch
 from src.script_generator import ScriptGenerator, ScriptResult
 from src.remote_tts_client import RemoteTTSClient
 from src.audio_processor import AudioProcessor
+from src.copywriter import Copywriter, EpisodeMetadata
+from src.cover_generator import CoverGenerator
+from src.publisher import Publisher
 
 # Configuración de logs
 logging.basicConfig(
@@ -53,6 +56,7 @@ def run_pipeline(
     test_tts: bool = False,
     no_music: bool = False,
     bg_music: Optional[str] = None,
+    publish: bool = False,
 ):
     """Ejecuta el pipeline completo de podcast."""
     start_time = datetime.now(timezone.utc)
@@ -164,11 +168,42 @@ def run_pipeline(
         )
         console.print(f"💾 [green]Guión guardado exitosamente en:[/green]\n  • TXT: {txt_file}\n  • MD:  {md_file}")
 
+    covers_out_dir = base_dir / config.get("paths", {}).get("output_covers", "output/covers")
+    meta_out_dir = base_dir / config.get("paths", {}).get("output_metadata", "output/metadata")
+    covers_out_dir.mkdir(parents=True, exist_ok=True)
+    meta_out_dir.mkdir(parents=True, exist_ok=True)
+
+    # FASE 2.5: GENERACIÓN DE METADATA EDITORIAL Y PORTADA (THUMBNAIL)
+    console.print("\n[bold cyan]🎨 FASE 2.5: Generación de Portada (Thumbnail) y Metadata Editorial[/bold cyan]")
+    llm_cfg = config.get("llm", {})
+    with open(txt_file, "r", encoding="utf-8") as f:
+        script_content = f.read()
+
+    copywriter = Copywriter(
+        base_url=llm_cfg.get("base_url", "http://192.168.1.200:20128/v1"),
+        api_key=llm_cfg.get("api_key", "sk-625c35c6ebef3fea-bhqllm-9dad3943"),
+        model=llm_cfg.get("model", "hermes-rotator"),
+    )
+    meta_tag = f"EP{start_time.strftime('%Y%m%d')}"
+    meta = copywriter.generate_metadata(script_content, tag=meta_tag)
+    meta_txt_file = copywriter.save_metadata(meta, meta_out_dir, base_name=f"podcast_{timestamp_str}")
+
+    cover_gen = CoverGenerator(size=1400)
+    cover_file = covers_out_dir / f"cover_{timestamp_str}.jpg"
+    edition_label = f"SEMANAL • {start_time.strftime('%Y-%m-%d')}"
+    cover_gen.generate(
+        title=meta.title,
+        output_path=cover_file,
+        edition_label=edition_label,
+    )
+
     if dry_run:
         console.print(
             Panel(
                 f"[bold green]🏁 Modo Dry-Run completado exitosamente.[/bold green]\n"
                 f"Guión listo en: [cyan]{txt_file}[/cyan]\n"
+                f"Portada lista en: [cyan]{cover_file}[/cyan]\n"
+                f"Metadata lista en: [cyan]{meta_txt_file}[/cyan]\n"
                 f"No se invocó la síntesis de voz en el servidor .248.",
                 border_style="green",
             )
@@ -190,12 +225,12 @@ def run_pipeline(
     final_mp3_path = audio_out_dir / f"podcast_{timestamp_str}.mp3"
 
     metadata = {
-        "title": f"Podcast Linux & Open Source - {start_time.strftime('%Y-%m-%d')}",
+        "title": meta.title,
         "artist": "Pipeline Automatizado",
-        "album": "Semanal Open Source",
+        "album": "Podcast Semanal Linux & Open Source",
         "date": start_time.strftime("%Y"),
         "genre": "Podcast",
-        "comment": "Generado automáticamente con RSS, LLM local y síntesis de voz",
+        "comment": meta.description[:250],
     }
 
     # Resolver música de fondo
@@ -224,29 +259,53 @@ def run_pipeline(
         console.print(f"[bold red]❌ Error durante el procesamiento de audio: {exc}[/bold red]")
         sys.exit(1)
 
+    audio_dur = audio_proc.get_audio_duration(final_mp3_path)
+
+    # FASE 5: PUBLICACIÓN EN GITHUB (RELEASES + GITHUB PAGES RSS FEED)
+    pub_res = None
+    if publish:
+        console.print("\n[bold cyan]🚀 FASE 5: Publicación Oficial en GitHub Releases y Feed RSS[/bold cyan]")
+        try:
+            publisher = Publisher(base_dir)
+            pub_res = publisher.publish_episode(
+                mp3_path=final_mp3_path,
+                cover_path=cover_file,
+                title=meta.title,
+                description=meta.description,
+                hashtags=meta.hashtags,
+                duration_seconds=int(audio_dur),
+                tag=meta_tag,
+            )
+        except Exception as exc:
+            console.print(f"[bold red]❌ Error durante la publicación oficial: {exc}[/bold red]")
+            sys.exit(1)
+
     # RESUMEN FINAL
     total_duration = (datetime.now(timezone.utc) - start_time).total_seconds()
-    audio_dur = audio_proc.get_audio_duration(final_mp3_path)
 
     summary_table = Table(title="Resumen del Pipeline de Podcast", border_style="green")
     summary_table.add_column("Métrica / Artefacto", style="cyan")
     summary_table.add_column("Detalle", style="bold white")
 
+    summary_table.add_row("Título", meta.title)
     summary_table.add_row("Guión (TXT)", str(txt_file))
-    if md_file:
-        summary_table.add_row("Guión (Markdown)", str(md_file))
+    summary_table.add_row("Portada (JPG 1400x1400)", str(cover_file))
+    summary_table.add_row("Metadata (TXT/JSON)", str(meta_txt_file))
     summary_table.add_row("Audio Raw (WAV)", str(raw_wav_path))
     summary_table.add_row("Audio Final (MP3)", str(final_mp3_path))
     summary_table.add_row("Música de Fondo", str(bg_music_file.name) if bg_music_file else "Sin música")
     summary_table.add_row("Duración Audio", f"{audio_dur/60:.2f} minutos ({audio_dur:.1f}s)")
     summary_table.add_row("Estándar Loudness", "EBU R128 (-16 LUFS, -1.0 dB True Peak)")
+    if pub_res:
+        summary_table.add_row("Feed RSS Público", pub_res["feed_url"])
+        summary_table.add_row("GitHub Release", f"https://github.com/{publisher.repo}/releases/tag/{pub_res['tag']}")
     summary_table.add_row("Tiempo Total Pipeline", f"{total_duration:.1f} segundos")
 
     console.print()
     console.print(summary_table)
     console.print(
         Panel(
-            f"[bold green]🎉 ¡Episodio de podcast producido y masterizado con éxito![/bold green]\n"
+            f"[bold green]🎉 ¡Episodio de podcast producido, masterizado{' y publicado' if publish else ''} con éxito![/bold green]\n"
             f"Archivo final disponible en: [bold yellow]{final_mp3_path}[/bold yellow]",
             border_style="green",
         )
@@ -306,6 +365,11 @@ def main():
         metavar="PATH_AUDIO",
         help="Ruta personalizada al archivo de música de fondo (ej: assets/background.mp3)",
     )
+    parser.add_argument(
+        "--publish",
+        action="store_true",
+        help="Publica automáticamente el episodio en GitHub Releases y actualiza feed.xml en GitHub Pages",
+    )
 
     args = parser.parse_args()
     config = load_config(Path(args.config))
@@ -320,6 +384,7 @@ def main():
             test_tts=args.test_tts,
             no_music=args.no_music,
             bg_music=args.bg_music,
+            publish=args.publish,
         )
     except KeyboardInterrupt:
         console.print("\n[yellow]Pipeline interrumpido por el usuario.[/yellow]")

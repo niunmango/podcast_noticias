@@ -1,0 +1,16 @@
+[Unit]
+Description=Generador y Publicador Semanal de Podcast Linux & Open Source
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ramiro/podcast_noticias
+Environment="PATH=/home/ramiro/podcast_noticias/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/home/ramiro/podcast_noticias/venv/bin/python3 /home/ramiro/podcast_noticias/main.py --publish
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=default.target

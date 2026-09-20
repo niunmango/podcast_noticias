@@ -1,0 +1,12 @@
+[Unit]
+Description=Temporizador Semanal para Generar y Publicar Podcast Linux & Open Source (Sábados 03:00 ART)
+Requires=podcast-noticias.service
+
+[Timer]
+# Se ejecuta todos los sábados a las 03:00 AM (hora de Argentina = 06:00 UTC)
+OnCalendar=Sat *-*-* 03:00:00 America/Argentina/Buenos_Aires
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target
