@@ -56,20 +56,80 @@ class NewsBatch(BaseModel):
     days_limit: int
     items: List[NewsItem]
 
-    def to_formatted_prompt_text(self, max_items: int = 25) -> str:
-        """Formatea las noticias candidatas para inyectarlas al LLM."""
+    def categorize_items(self) -> Dict[str, List[NewsItem]]:
+        """Clasifica las noticias en las 4 líneas temáticas requeridas."""
+        gaming_kw = [
+            "gamingonlinux", "gaming", "steam", "steamos", "proton", "wine", "dxvk",
+            "vulkan", "game", "games", "anti-cheat", "controller", "gamepad",
+            "playstation", "ps5", "gamer"
+        ]
+        distro_kw = [
+            "ubuntu", "fedora", "debian", "arch", "distro", "gnome", "kde", "plasma",
+            "wayland", "desktop", "clonezilla", "mint", "opensuse", "systemd", "zswap",
+            "cosmic", "session", "manjaro"
+        ]
+        kernel_kw = [
+            "kernel", "linux 7.", "linux 6.", "x86", "arm64", "btrfs", "ext4", "sched",
+            "c-state", "microcode", "sysfs", "bcachefs", "patch", "lwn"
+        ]
+
+        cats: Dict[str, List[NewsItem]] = {
+            "kernel": [],
+            "desktop_distro": [],
+            "aplicaciones_libres": [],
+            "gaming": [],
+        }
+
+        for item in self.items:
+            text = f"{item.source} {item.title} {item.summary}".lower()
+            title_lower = item.title.lower()
+
+            # 1. Gaming
+            if any(k in text for k in gaming_kw):
+                cats["gaming"].append(item)
+            # 2. Desktop / Distros
+            elif any(k in title_lower for k in distro_kw) or (item.source in ["OMG! Ubuntu", "MuyLinux"] and any(k in text for k in distro_kw)):
+                cats["desktop_distro"].append(item)
+            # 3. Kernel
+            elif any(k in text for k in kernel_kw):
+                cats["kernel"].append(item)
+            # 4. Aplicaciones Libres
+            else:
+                cats["aplicaciones_libres"].append(item)
+
+        return cats
+
+    def to_formatted_prompt_text(self, items_per_category: int = 3, max_items: Optional[int] = None) -> str:
+        """Formatea las noticias agrupadas obligatoriamente en las 4 líneas temáticas requeridas."""
         if not self.items:
             return "No se encontraron noticias recientes en los feeds consultados."
 
-        selected = self.items[:max_items]
-        lines = [
-            f"Noticias recopiladas de los últimos {self.days_limit} días "
-            f"(Total seleccionadas: {len(selected)}):",
-            "---",
+        cats = self.categorize_items()
+        per_cat = items_per_category
+        if max_items is not None and max_items < 12:
+            per_cat = max(1, max_items // 4)
+        sections_config = [
+            ("LÍNEA 1: KERNEL Y BAJO NIVEL (Kernel Linux, subsistemas, drivers, I/O)", cats.get("kernel", [])),
+            ("LÍNEA 2: DISTRIBUCIONES Y ESCRITORIO (Ubuntu, Fedora, GNOME, KDE, Wayland, distros)", cats.get("desktop_distro", [])),
+            ("LÍNEA 3: APLICACIONES LIBRES Y HERRAMIENTAS (Software open source, utilidades, ecosistema)", cats.get("aplicaciones_libres", [])),
+            ("LÍNEA 4: GAMING EN LINUX (Steam, Proton, Wine, Vulkan, DXVK, controladores)", cats.get("gaming", [])),
         ]
-        for i, item in enumerate(selected, 1):
-            lines.append(f"{i}. {item.to_snippet()}")
-            lines.append("")
+
+        lines = [
+            f"Noticias recopiladas de los últimos {self.days_limit} días estructuradas en las 4 líneas temáticas:",
+            "================================================================================",
+        ]
+
+        for title, items in sections_config:
+            lines.append(f"\n### {title}:")
+            selected = items[:per_cat] if items else []
+            if not selected:
+                lines.append("  (No hubo noticias críticas específicas en este periodo para este bloque)")
+            else:
+                for i, it in enumerate(selected, 1):
+                    lines.append(f"{i}. {it.to_snippet()}")
+                    lines.append("")
+
         return "\n".join(lines)
 
 

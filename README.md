@@ -16,7 +16,13 @@ Pipeline modular en Python para la generación automática de episodios semanale
 [ 2. Generador de Guión (LLM Local) ]
     • Host: http://192.168.1.200:20128/v1
     • Modelo: hermes-rotator (GPT-OSS 120B)
-    • Estilo: Prosa corrida rioplatense (750-850 palabras, ~5-6 min)
+    • Estilo: Prosa corrida rioplatense profesional con voseo técnico (sin "che")
+    • Extensión: 1000-1150 palabras (~6 minutos de locución fluida)
+    • 4 Líneas temáticas obligatorias:
+        1. Kernel y bajo nivel (Linux, subsistemas, drivers)
+        2. Desktop / Distros (Ubuntu, Fedora, GNOME, KDE, Wayland)
+        3. Aplicaciones libres y herramientas (utilidades, open source)
+        4. Gaming en Linux (Steam, Proton, Wine, Vulkan, DXVK)
     • Salida: Texto limpio sin marcas de producción ([MÚSICA], etc.)
               │
               ▼ (Guión .txt y .md)
@@ -31,7 +37,7 @@ Pipeline modular en Python para la generación automática de episodios semanale
     • Salida: MP3 44.1 kHz, 192 kbps con metadatos ID3
               │
               ▼
-[ Episodio Final: output/audio/podcast_YYYYMMDD_HHMMSS.mp3 ]
+[ Episodio Final: output/audio/podcast_YYYYMMDD_HHMMSS.mp3 (~6 min) ]
 ```
 
 ---
@@ -43,6 +49,8 @@ podcast_noticias/
 ├── config.json                 # Configuración central (endpoints, feeds RSS, rutas, audio)
 ├── main.py                     # Orquestador principal y CLI
 ├── requirements.txt            # Dependencias Python del pipeline
+├── assets/
+│   └── background.mp3          # Pista de música de fondo para la mezcla final
 ├── prompts/
 │   └── system_prompt.txt       # Prompt del sistema para el LLM (tono rioplatense, reglas TTS)
 ├── src/
@@ -88,7 +96,7 @@ pip install -r requirements.txt
 
 El archivo `config.json` centraliza todos los parámetros del pipeline:
 
-- **`llm`**: Endpoint OpenAI compatible, modelo, temperatura y rango de palabras objetivo (750-850).
+- **`llm`**: Endpoint OpenAI compatible, modelo, temperatura y rango de palabras objetivo (1000-1150 palabras para ~6 minutos de locución).
 - **`tts`**: Parámetros de conexión SSH al servidor `.248`, ruta remota de `clonvoz`, script ejecutor (`generar.sh`) y timeouts.
 - **`rss`**: Ventana de días (default: 7) y lista de portales monitoreados:
   - Phoronix
@@ -99,7 +107,7 @@ El archivo `config.json` centraliza todos los parámetros del pipeline:
   - It's FOSS
   - Linux Today
   - MuyLinux
-- **`audio`**: Filtro Loudnorm (`loudnorm=I=-16:TP=-1.0:LRA=11`), tasa de muestreo (`44100`) y bitrate (`192k`).
+- **`audio`**: Filtro Loudnorm (`loudnorm=I=-16:TP=-1.0:LRA=11`), tasa de muestreo (`44100`), bitrate (`192k`), ruta de música de fondo (`background_music: "assets/background.mp3"`) y volumen de fondo (`background_volume: 0.08`).
 
 ---
 
@@ -138,6 +146,17 @@ Simular una fecha de corte o variar los días de recopilación:
 
 ```bash
 python3 main.py --date-offset 2026-09-15 --days 5
+```
+
+### 6. Control de Música de Fondo
+Por defecto se utiliza `assets/background.mp3` al 8% de volumen. Es posible personalizar la pista o desactivarla:
+
+```bash
+# Desactivar música de fondo (solo voz)
+python3 main.py --no-music
+
+# Usar pista personalizada de fondo
+python3 main.py --bg-music /ruta/a/mi_musica.mp3
 ```
 
 ---

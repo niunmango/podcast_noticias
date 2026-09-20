@@ -66,7 +66,7 @@ def clean_tts_prose(text: str) -> str:
     text = re.sub(r"^(?:Now|Transition to|Segment \d|Paragraph \d).*$", "", text, flags=re.MULTILINE | re.IGNORECASE)
 
     # Cortar desde el saludo inicial típico en español rioplatense
-    saludo_match = re.search(r"\b(Che\b|¡?Hola\b|¡?Bienvenidos\b|¡?Muy buenas\b|Arrancamos\b)", text, re.IGNORECASE)
+    saludo_match = re.search(r"\b(¡?Hola\b|¡?Bienvenidos\b|¡?Muy buenas\b|Arrancamos\b)", text, re.IGNORECASE)
     if saludo_match and saludo_match.start() > 0:
         text = text[saludo_match.start():]
 
@@ -77,6 +77,9 @@ def clean_tts_prose(text: str) -> str:
 
     # Quitar comillas tipográficas y comillas dobles sueltas
     text = re.sub(r'["“”«»]', '', text)
+
+    # Eliminar cualquier aparición residual de la muletilla 'che' o 'Che'
+    text = re.sub(r"\b[Cc]he,?\s*", "", text)
 
     # Filtrar párrafos de meta-razonamiento o conteo
     paragraphs = []
@@ -104,8 +107,8 @@ class ScriptGenerator:
         model: str = "hermes-rotator",
         temperature: float = 0.7,
         system_prompt_path: Optional[Path] = None,
-        target_words_min: int = 750,
-        target_words_max: int = 850,
+        target_words_min: int = 1000,
+        target_words_max: int = 1150,
     ):
         self.base_url = base_url
         self.api_key = api_key
@@ -129,16 +132,21 @@ class ScriptGenerator:
     def generate_script(self, news_prompt_text: str, max_retries: int = 2) -> ScriptResult:
         """
         Genera el guión a partir del texto estructurado de noticias candidatas.
-        Si la extensión queda fuera de los límites (< 700 o > 900 palabras),
-        aplica un pase de reajuste.
+        Asegura que se cubran las 4 líneas temáticas y que la extensión ronde
+        entre 1000 y 1150 palabras para exactamente 6 minutos de locución.
         """
         user_prompt = (
-            "Acá tenés la selección de noticias de Linux y Software Libre recopiladas en los últimos 7 días.\n"
-            "Seleccioná entre 3 y 4 de las más relevantes o interesantes, y redactá el guión completo en prosa "
-            "rioplatense siguiendo las instrucciones de estructura, tono y longitud "
-            "(aproximadamente 800 palabras para unos 6 minutos de locución natural).\n"
-            "Redactá DIRECTAMENTE en castellano rioplatense el texto limpio que leerá el locutor, sin notas previas, "
-            "sin preámbulos en inglés ni conteos de palabras.\n\n"
+            "Acá tenés las noticias de Linux y Software Libre recopiladas en los últimos 7 días estructuradas en 4 líneas:\n"
+            "1. Kernel y bajo nivel\n"
+            "2. Distribuciones y Escritorio (Desktop/Distro)\n"
+            "3. Aplicaciones Libres y Herramientas\n"
+            "4. Gaming en Linux (Steam, Proton, Wine, Vulkan)\n\n"
+            "Redactá el guión completo del episodio cubriendo OBLIGATORIAMENTE cada una de las 4 líneas temáticas en el desarrollo.\n"
+            "La extensión debe ser de aproximadamente 1050 palabras (entre 1000 y 1150 palabras) para una locución fluida de exactamente 6 minutos.\n"
+            "REGLAS CRÍTICAS DE ESTILO:\n"
+            "- Hablá en castellano rioplatense profesional y cordial con voseo técnico (mirá, fijate, tenés, podés, armar).\n"
+            "- ESTRICTAMENTE PROHIBIDO usar la palabra 'che' en cualquier parte del guión (saludo, cuerpo o cierre); resulta demasiado informal.\n"
+            "- Escribí DIRECTAMENTE en texto plano continuo lo que va a leer el locutor, sin notas previas, sin títulos ni marcas tipo [MÚSICA].\n\n"
             f"{news_prompt_text}"
         )
 
@@ -150,7 +158,7 @@ class ScriptGenerator:
                 {"role": "user", "content": user_prompt},
             ],
             temperature=self.temperature,
-            max_tokens=1800,
+            max_tokens=2500,
         )
 
         msg = response.choices[0].message
@@ -167,25 +175,26 @@ class ScriptGenerator:
         best_prose = prose
         best_words = words
 
-        # Solo ajustar si se desvía drásticamente (< 600 o > 1100 palabras)
+        # Ajustar si se desvía drásticamente (< 900 o > 1250 palabras)
         attempts = 0
-        while (best_words < 600 or best_words > 1100) and attempts < max_retries:
+        while (best_words < 900 or best_words > 1250) and attempts < max_retries:
             attempts += 1
             import time
             time.sleep(7)
 
-            if best_words < 600:
+            if best_words < 900:
                 adjustment_prompt = (
-                    f"El guión actual tiene {best_words} palabras. Por favor, expandí el desarrollo de los temas, "
-                    "agregando más explicaciones y ejemplos técnicos para alcanzar aproximadamente 800 palabras. "
-                    "IMPORTANTE: Prosa continua exclusivamente. NO numeres ni cuentes palabras entre paréntesis:\n\n"
+                    f"El guión actual tiene {best_words} palabras. Por favor, expandí el desarrollo de las 4 líneas temáticas "
+                    "(Kernel, Desktop/Distro, Aplicaciones Libres y Gaming), agregando más contexto técnico y ejemplos prácticos "
+                    "para alcanzar aproximadamente 1050 palabras (6 minutos de duración). "
+                    "IMPORTANTE: Prosa continua exclusivamente, sin usar la palabra 'che' y sin notas de conteo:\n\n"
                     f"{best_prose}"
                 )
             else:
                 adjustment_prompt = (
-                    f"El guión actual tiene {best_words} palabras. Es demasiado largo. Por favor, condensalo y hacelo más "
-                    "directo para que tenga aproximadamente 800 palabras. "
-                    "IMPORTANTE: Prosa continua exclusivamente. NO numeres ni cuentes palabras entre paréntesis:\n\n"
+                    f"El guión actual tiene {best_words} palabras. Por favor, condensalo ligeramente para que tenga "
+                    "aproximadamente 1050 palabras manteniendo las 4 líneas temáticas (Kernel, Desktop/Distro, Apps y Gaming). "
+                    "IMPORTANTE: Prosa continua exclusivamente, sin usar la palabra 'che' y sin notas de conteo:\n\n"
                     f"{best_prose}"
                 )
 
@@ -198,7 +207,7 @@ class ScriptGenerator:
                         {"role": "user", "content": adjustment_prompt},
                     ],
                     temperature=0.3,
-                    max_tokens=1800,
+                    max_tokens=2500,
                 )
                 adj_msg = adj_response.choices[0].message
                 raw_content = adj_msg.content or ""
@@ -210,7 +219,7 @@ class ScriptGenerator:
                 adj_prose = re.sub(r"\n{3,}", "\n\n", adj_prose).strip()
                 adj_words = count_words(adj_prose)
                 console.print(f"📝 [yellow]Borrador ajustado ({attempts}): {adj_words} palabras.[/yellow]")
-                if adj_words >= 500:
+                if adj_words >= 800:
                     best_prose = adj_prose
                     best_words = adj_words
             except Exception as e:

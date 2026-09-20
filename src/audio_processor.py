@@ -87,7 +87,10 @@ class AudioProcessor:
             cmd.extend([
                 "-stream_loop", "-1", "-i", str(bg_music_path),
                 "-filter_complex",
-                f"[0:a]{filter_str}[v];[1:a]volume={bg_volume}[bg];[v][bg]amix=inputs=2:duration=first[out]",
+                f"[0:a]aformat=sample_rates={self.sample_rate}:channel_layouts=stereo[v];"
+                f"[1:a]aformat=sample_rates={self.sample_rate}:channel_layouts=stereo,volume={bg_volume}[bg];"
+                f"[v][bg]amix=inputs=2:duration=first:weights=1 1[mixed];"
+                f"[mixed]{filter_str}[out]",
                 "-map", "[out]",
             ])
         else:

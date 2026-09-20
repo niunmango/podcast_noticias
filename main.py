@@ -51,6 +51,8 @@ def run_pipeline(
     date_offset: Optional[str] = None,
     days: int = 7,
     test_tts: bool = False,
+    no_music: bool = False,
+    bg_music: Optional[str] = None,
 ):
     """Ejecuta el pipeline completo de podcast."""
     start_time = datetime.now(timezone.utc)
@@ -150,8 +152,8 @@ def run_pipeline(
             model=llm_cfg.get("model", "hermes-rotator"),
             temperature=llm_cfg.get("temperature", 0.7),
             system_prompt_path=sys_prompt_file,
-            target_words_min=llm_cfg.get("target_words_min", 750),
-            target_words_max=llm_cfg.get("target_words_max", 850),
+            target_words_min=llm_cfg.get("target_words_min", 1000),
+            target_words_max=llm_cfg.get("target_words_max", 1150),
         )
 
         script_res = generator.generate_script(news_prompt)
@@ -196,8 +198,28 @@ def run_pipeline(
         "comment": "Generado automáticamente con RSS, LLM local y síntesis de voz",
     }
 
+    # Resolver música de fondo
+    bg_music_file: Optional[Path] = None
+    if not no_music:
+        bg_candidate = bg_music or audio_cfg.get("background_music")
+        if bg_candidate:
+            bg_path = Path(bg_candidate)
+            if not bg_path.is_absolute():
+                bg_path = base_dir / bg_path
+            if bg_path.is_file():
+                bg_music_file = bg_path
+                console.print(f"🎵 [cyan]Música de fondo activa:[/cyan] {bg_music_file.name} (Volumen: {audio_cfg.get('background_volume', 0.08)})")
+            else:
+                console.print(f"⚠️ [yellow]Música de fondo no encontrada en '{bg_path}', continuando sin música.[/yellow]")
+
     try:
-        audio_proc.process_podcast(raw_wav_path, final_mp3_path, metadata=metadata)
+        audio_proc.process_podcast(
+            raw_wav_path,
+            final_mp3_path,
+            metadata=metadata,
+            bg_music_path=bg_music_file,
+            bg_volume=audio_cfg.get("background_volume", 0.08),
+        )
     except Exception as exc:
         console.print(f"[bold red]❌ Error durante el procesamiento de audio: {exc}[/bold red]")
         sys.exit(1)
@@ -215,6 +237,7 @@ def run_pipeline(
         summary_table.add_row("Guión (Markdown)", str(md_file))
     summary_table.add_row("Audio Raw (WAV)", str(raw_wav_path))
     summary_table.add_row("Audio Final (MP3)", str(final_mp3_path))
+    summary_table.add_row("Música de Fondo", str(bg_music_file.name) if bg_music_file else "Sin música")
     summary_table.add_row("Duración Audio", f"{audio_dur/60:.2f} minutos ({audio_dur:.1f}s)")
     summary_table.add_row("Estándar Loudness", "EBU R128 (-16 LUFS, -1.0 dB True Peak)")
     summary_table.add_row("Tiempo Total Pipeline", f"{total_duration:.1f} segundos")
@@ -271,6 +294,18 @@ def main():
         action="store_true",
         help="Prueba la conectividad y estado del servidor TTS en .248 sin generar podcast",
     )
+    parser.add_argument(
+        "--no-music",
+        action="store_true",
+        help="Deshabilita la pista de música de fondo en la masterización",
+    )
+    parser.add_argument(
+        "--bg-music",
+        type=str,
+        default=None,
+        metavar="PATH_AUDIO",
+        help="Ruta personalizada al archivo de música de fondo (ej: assets/background.mp3)",
+    )
 
     args = parser.parse_args()
     config = load_config(Path(args.config))
@@ -283,6 +318,8 @@ def main():
             date_offset=args.date_offset,
             days=args.days,
             test_tts=args.test_tts,
+            no_music=args.no_music,
+            bg_music=args.bg_music,
         )
     except KeyboardInterrupt:
         console.print("\n[yellow]Pipeline interrumpido por el usuario.[/yellow]")
