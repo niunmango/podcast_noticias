@@ -259,12 +259,9 @@ def generate_or_update_feed(
 
 
 def git_commit_and_push(repo_dir: Path, commit_msg: str):
-    """Realiza git pull --rebase, git add feed.xml, commit y push en el repositorio de GitHub Pages."""
+    """Realiza git add feed.xml, commit y push en el repositorio de GitHub Pages."""
     console.print(f"🔄 [cyan]Sincronizando feed en GitHub Pages ({repo_dir.name})...[/cyan]")
-    # 1. Asegurar sincronización con upstream
-    subprocess.run(["git", "-C", str(repo_dir), "pull", "--rebase", "origin", "main"], check=False)
-
-    # 2. Agregar únicamente feed.xml (la portada general del podcast no se sobreescribe)
+    # Agregar únicamente feed.xml (la portada general del podcast no se sobreescribe)
     subprocess.run(["git", "-C", str(repo_dir), "add", "feed.xml"], check=True)
 
     diff_check = subprocess.run(["git", "-C", str(repo_dir), "diff", "--staged", "--quiet"])
@@ -302,6 +299,7 @@ class Publisher:
         hashtags: str,
         duration_seconds: int,
         tag: Optional[str] = None,
+        pub_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Publica el episodio de noticias dentro del feed unificado de Podcast de Linux al Sur:
@@ -347,7 +345,7 @@ class Publisher:
             "audio_bytes": mp3_path.stat().st_size,
             "duration": duration_seconds,
             "guid": f"https://github.com/{self.repo}/releases/tag/{date_tag}",
-            "pub_date": email.utils.formatdate(usegmt=True),
+            "pub_date": pub_date or email.utils.formatdate(usegmt=True),
             "image_url": image_url or channel_image_url,
         }
 
@@ -360,6 +358,9 @@ class Publisher:
             "description": self.podcast_desc,
             "image": channel_image_url,
         }
+
+        # 3. Traer cambios upstream antes de modificar feed.xml
+        subprocess.run(["git", "-C", str(self.pages_dir), "pull", "--rebase", "origin", "main"], check=False)
 
         feed_file = self.pages_dir / "feed.xml"
         generate_or_update_feed(feed_file, channel_info, episode_data)
