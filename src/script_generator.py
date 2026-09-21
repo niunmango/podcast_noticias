@@ -38,12 +38,32 @@ def count_words(text: str) -> int:
     return len(words)
 
 
+def is_english_scratchpad(p_text: str) -> bool:
+    """Detecta si un párrafo contiene notas internas de conteo o borrador en inglés."""
+    p_lower = p_text.lower()
+    keywords = [
+        "count words", "word count", "words intro", "draft", "need ~", "good enough",
+        "still short", "we'll write", "we will write", "let's add", "let's write",
+        "para maybe", "closing:", "opening:", "block 1", "block 2", "block 3", "block 4",
+        "distributions and desktop", "now development"
+    ]
+    if any(k in p_lower for k in keywords):
+        return True
+    en_matches = len(re.findall(r"\b(the|and|we|will|lets|let|can|add|about|need|draft|block|closing|opening|words|still|short|total|thats|that|good|enough|write)\b", p_lower))
+    es_matches = len(re.findall(r"\b(el|la|los|las|de|en|un|una|que|por|con|para|del|al|es|se|no|lo|como|su|más)\b", p_lower))
+    if en_matches >= 3 and en_matches > es_matches:
+        return True
+    return False
+
+
 def clean_tts_prose(text: str) -> str:
     """
     Limpia y sanitiza el texto para síntesis de voz óptima:
     - Remueve etiquetas de producción como [MÚSICA], [INTRO], etc.
     - Remueve encabezados markdown (#, ##) y formato (**negrita**, *cursiva*).
-    - Remueve corchetes y asteriscos.
+    - Remueve corchetes, asteriscos y comillas.
+    - Filtra notas internas de conteo y borradores en inglés (Block, Draft, words count).
+    - Asegura que el locutor se identifique correctamente como Ramiro.
     - Normaliza saltos de línea y espaciado.
     """
     # Quitar posibles bloques de pensamiento (ej. <think>...</think>)
@@ -64,6 +84,9 @@ def clean_tts_prose(text: str) -> str:
 
     # Quitar posibles notas intermedias de planificación ("Now development...", "Transition to...", etc.)
     text = re.sub(r"^(?:Now|Transition to|Segment \d|Paragraph \d).*$", "", text, flags=re.MULTILINE | re.IGNORECASE)
+
+    # Corregir si el modelo omitió el nombre del locutor ("Soy y en los próximos...")
+    text = re.sub(r"\bSoy\s+y\s+en\s+los\s+próximos\b", "Soy Ramiro y en los próximos", text, flags=re.IGNORECASE)
 
     # Cortar desde el saludo inicial típico en español rioplatense
     saludo_match = re.search(r"\b(¡?Hola\b|¡?Bienvenidos\b|¡?Muy buenas\b|Arrancamos\b)", text, re.IGNORECASE)
@@ -87,14 +110,30 @@ def clean_tts_prose(text: str) -> str:
         p_clean = p.strip()
         if not p_clean:
             continue
-        p_lower = p_clean.lower()
-        if any(k in p_lower for k in ["count words", "words intro", "draft each segment", "let's draft", "segment about", "word count"]):
+        # Limpiar líneas de encabezado de borrador dentro del párrafo (Draft:, Block 1:, etc.)
+        lines = [l.strip() for l in p_clean.split("\n") if l.strip()]
+        valid_lines = [
+            l for l in lines
+            if not re.match(r"^(?:block \d|draft|closing|opening|paragraph \d|segment \d|we\'ll write|need ~|\d+ words).*$", l, re.IGNORECASE)
+        ]
+        if not valid_lines:
+            continue
+        p_joined = " ".join(valid_lines)
+        if is_english_scratchpad(p_joined):
             continue
         # Descartar si el párrafo tiene palabras numeradas (palabra1 palabra2)
-        numbered = len(re.findall(r"\b[a-zA-ZáéíóúÁÉÍÓÚñÑ]+\d+\b", p_clean))
+        numbered = len(re.findall(r"\b[a-zA-ZáéíóúÁÉÍÓÚñÑ]+\d+\b", p_joined))
         if numbered > 3:
             continue
-        paragraphs.append(re.sub(r"\s+", " ", p_clean))
+        paragraphs.append(re.sub(r"\s+", " ", p_joined))
+
+    # Verificar que el último párrafo termine de forma limpia (no cortado a mitad de palabra)
+    if paragraphs:
+        last_p = paragraphs[-1]
+        if not re.search(r"[.!?]$", last_p):
+            sentences = re.split(r"(?<=[.!?])\s+", last_p)
+            if len(sentences) > 1 and re.search(r"[.!?]$", sentences[-2]):
+                paragraphs[-1] = " ".join(sentences[:-1])
 
     return "\n\n".join(paragraphs)
 
@@ -105,7 +144,7 @@ class ScriptGenerator:
         base_url: str = "http://192.168.1.200:20128/v1",
         api_key: str = "sk-625c35c6ebef3fea-bhqllm-9dad3943",
         model: str = "hermes-rotator",
-        temperature: float = 0.7,
+        temperature: float = 0.2,
         system_prompt_path: Optional[Path] = None,
         target_words_min: int = 1000,
         target_words_max: int = 1150,
@@ -144,9 +183,10 @@ class ScriptGenerator:
             "Redactá el guión completo del episodio cubriendo OBLIGATORIAMENTE cada una de las 4 líneas temáticas en el desarrollo.\n"
             "La extensión debe ser de aproximadamente 1050 palabras (entre 1000 y 1150 palabras) para una locución fluida de exactamente 6 minutos.\n"
             "REGLAS CRÍTICAS DE ESTILO:\n"
-            "- Hablá en castellano rioplatense profesional y cordial con voseo técnico (mirá, fijate, tenés, podés, armar).\n"
-            "- ESTRICTAMENTE PROHIBIDO usar la palabra 'che' en cualquier parte del guión (saludo, cuerpo o cierre); resulta demasiado informal.\n"
-            "- Escribí DIRECTAMENTE en texto plano continuo lo que va a leer el locutor, sin notas previas, sin títulos ni marcas tipo [MÚSICA].\n\n"
+            "- Idioma: 100% castellano rioplatense. ESTRICTAMENTE PROHIBIDO pensar o redactar en inglés, hacer conteos o notas intermedias.\n"
+            "- Presentate como Ramiro en la apertura dentro de Podcast de Linux al Sur.\n"
+            "- ESTRICTAMENTE PROHIBIDO usar la palabra 'che' en cualquier parte del guión (saludo, cuerpo o cierre).\n"
+            "- Escribí DIRECTAMENTE en texto plano continuo lo que va a leer el locutor, sin notas previas, sin títulos de sección ni marcas tipo [MÚSICA].\n\n"
             f"{news_prompt_text}"
         )
 
@@ -158,7 +198,7 @@ class ScriptGenerator:
                 {"role": "user", "content": user_prompt},
             ],
             temperature=self.temperature,
-            max_tokens=2500,
+            max_tokens=3500,
         )
 
         msg = response.choices[0].message
@@ -187,14 +227,14 @@ class ScriptGenerator:
                     f"El guión actual tiene {best_words} palabras. Por favor, expandí el desarrollo de las 4 líneas temáticas "
                     "(Kernel, Desktop/Distro, Aplicaciones Libres y Gaming), agregando más contexto técnico y ejemplos prácticos "
                     "para alcanzar aproximadamente 1050 palabras (6 minutos de duración). "
-                    "IMPORTANTE: Prosa continua exclusivamente, sin usar la palabra 'che' y sin notas de conteo:\n\n"
+                    "IMPORTANTE: 100% castellano rioplatense, sin notas ni palabras en inglés, sin usar 'che' y sin notas de conteo. Prosa continua exclusivamente:\n\n"
                     f"{best_prose}"
                 )
             else:
                 adjustment_prompt = (
                     f"El guión actual tiene {best_words} palabras. Por favor, condensalo ligeramente para que tenga "
                     "aproximadamente 1050 palabras manteniendo las 4 líneas temáticas (Kernel, Desktop/Distro, Apps y Gaming). "
-                    "IMPORTANTE: Prosa continua exclusivamente, sin usar la palabra 'che' y sin notas de conteo:\n\n"
+                    "IMPORTANTE: 100% castellano rioplatense, sin notas ni palabras en inglés, sin usar 'che' y sin notas de conteo. Prosa continua exclusivamente:\n\n"
                     f"{best_prose}"
                 )
 
@@ -206,8 +246,8 @@ class ScriptGenerator:
                         {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": adjustment_prompt},
                     ],
-                    temperature=0.3,
-                    max_tokens=2500,
+                    temperature=0.2,
+                    max_tokens=3500,
                 )
                 adj_msg = adj_response.choices[0].message
                 raw_content = adj_msg.content or ""

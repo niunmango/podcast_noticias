@@ -56,7 +56,7 @@ class Copywriter:
         """
         system_prompt = (
             "Sos un especialista en comunicación técnica, podcasting y posicionamiento SEO de contenidos sobre Linux y Software Libre.\n"
-            "Tu tarea es generar el título, descripción y hashtags para la publicación de un episodio semanal del podcast 'Noticias de Software Libre de la Semana'.\n"
+            "Tu tarea es generar el título, descripción y hashtags para la edición semanal de noticias del 'Podcast de Linux al Sur'.\n"
             "La descripción debe resumir con claridad técnica y atractivo los temas principales tratados (Kernel, Desktop/Distro, Aplicaciones Libres y Gaming).\n"
             "Formato de respuesta OBLIGATORIO y EXACTO:\n"
             "TÍTULO: [Título atractivo y concreto, máx 75 caracteres]\n"
@@ -78,9 +78,13 @@ class Copywriter:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=self.temperature,
-                max_tokens=800,
+                max_tokens=1500,
             )
-            raw = response.choices[0].message.content or ""
+            msg = response.choices[0].message
+            raw = msg.content or ""
+            if not raw and hasattr(msg, "reasoning") and msg.reasoning:
+                raw = msg.reasoning
+
             # Quitar posibles wrappers markdown
             raw = re.sub(r"^```.*?\n", "", raw, flags=re.MULTILINE)
             raw = raw.replace("```", "").strip()
@@ -90,8 +94,11 @@ class Copywriter:
             logger.warning("Error invocando LLM para metadata: %s. Usando fallback.", err)
             date_str = datetime.now().strftime("%Y-%m-%d")
             title = f"Novedades de Linux & Open Source - {date_str}"
-            desc = "Resumen semanal del ecosistema Linux: novedades del kernel, distribuciones, herramientas libres y gaming."
+            desc = "Edición semanal de noticias en Podcast de Linux al Sur: novedades destacadas del kernel Linux, distribuciones de escritorio, aplicaciones de código abierto y gaming en Linux."
             tags = "#Linux #OpenSource #Kernel #SoftwareLibre #GamingOnLinux"
+
+        if not desc:
+            desc = "Edición semanal de noticias en Podcast de Linux al Sur: novedades destacadas del kernel Linux, distribuciones de escritorio, aplicaciones de código abierto y gaming en Linux."
 
         console.print(f"📌 [green]Título generado:[/green] {title}")
         return EpisodeMetadata(
@@ -121,10 +128,10 @@ class Copywriter:
 
         # Fallbacks si el modelo varió el formato
         if not title:
-            first_line = raw_text.strip().split("\n")[0]
-            title = re.sub(r"^(?:TÍTULO:?|Title:?)\s*", "", first_line).strip() or "Noticias de Software Libre de la Semana"
+            first_line = raw_text.strip().split("\n")[0] if raw_text.strip() else ""
+            title = re.sub(r"^(?:TÍTULO:?|Title:?)\s*", "", first_line).strip() or "Novedades de Software Libre de la Semana"
         if not desc:
-            desc = raw_text[:300].strip()
+            desc = "Edición semanal de noticias en Podcast de Linux al Sur: novedades del kernel, distribuciones, herramientas libres y gaming."
         if not tags:
             tags = "#Linux #OpenSource #Kernel #Ubuntu #GamingOnLinux"
 
