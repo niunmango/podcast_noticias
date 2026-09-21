@@ -23,11 +23,15 @@ class AudioProcessor:
         sample_rate: int = 44100,
         bitrate: str = "192k",
         trim_silence: bool = False,
+        denoise: bool = True,
+        denoise_filter: str = "highpass=f=80,lowpass=f=12000,adeclick,afftdn=nr=12:nf=-40:tn=1",
     ):
         self.loudnorm_filter = loudnorm_filter
         self.sample_rate = sample_rate
         self.bitrate = bitrate
         self.trim_silence = trim_silence
+        self.denoise = denoise
+        self.denoise_filter = denoise_filter
 
     def check_ffmpeg(self) -> bool:
         """Verifica que ffmpeg y ffprobe estén instalados."""
@@ -61,8 +65,9 @@ class AudioProcessor:
         bg_volume: float = 0.08,
     ) -> Path:
         """
-        Aplica normalización EBU R128 (-16 LUFS), opcional recorte de silencios,
-        conversión a MP3 y metadatos ID3.
+        Aplica filtro reductor de ruido (afftdn + adeclick + paso banda) a la voz,
+        normalización EBU R128 (-16 LUFS), opcional recorte de silencios,
+        mezcla con música de fondo y conversión a MP3 con metadatos ID3.
         """
         if not raw_voice_wav.is_file():
             raise FileNotFoundError(f"Archivo de voz no encontrado: '{raw_voice_wav}'")
@@ -79,22 +84,31 @@ class AudioProcessor:
         audio_filters.append(self.loudnorm_filter)
 
         filter_str = ",".join(audio_filters)
+        voice_clean_filter = f"{self.denoise_filter}," if self.denoise else ""
 
         cmd = ["ffmpeg", "-y", "-i", str(raw_voice_wav)]
 
         # Mezcla opcional con música de fondo sutil
         if bg_music_path and bg_music_path.is_file():
+            console.print("🎛️  [cyan]Aplicando filtro denoiser (afftdn + adeclick) a la voz y mezclando fondo...[/cyan]")
             cmd.extend([
                 "-stream_loop", "-1", "-i", str(bg_music_path),
                 "-filter_complex",
-                f"[0:a]aformat=sample_rates={self.sample_rate}:channel_layouts=stereo[v];"
+                f"[0:a]{voice_clean_filter}aformat=sample_rates={self.sample_rate}:channel_layouts=stereo[v];"
                 f"[1:a]aformat=sample_rates={self.sample_rate}:channel_layouts=stereo,volume={bg_volume}[bg];"
                 f"[v][bg]amix=inputs=2:duration=first:weights=1 1[mixed];"
                 f"[mixed]{filter_str}[out]",
                 "-map", "[out]",
             ])
         else:
-            cmd.extend(["-af", filter_str])
+            console.print("🎛️  [cyan]Aplicando filtro denoiser (afftdn + adeclick) y normalizando voz...[/cyan]")
+            all_filters = []
+            if self.denoise:
+                all_filters.append(self.denoise_filter)
+            if self.trim_silence:
+                all_filters.append("silenceremove=stop_periods=-1:stop_duration=1.2:stop_threshold=-40dB")
+            all_filters.append(self.loudnorm_filter)
+            cmd.extend(["-af", ",".join(all_filters)])
 
         cmd.extend([
             "-c:a", "libmp3lame",

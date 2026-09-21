@@ -82,11 +82,13 @@ def clean_tts_prose(text: str) -> str:
     # Quitar asteriscos sueltos
     text = text.replace("*", "").replace("`", "")
 
-    # Quitar posibles notas intermedias de planificación ("Now development...", "Transition to...", etc.)
-    text = re.sub(r"^(?:Now|Transition to|Segment \d|Paragraph \d).*$", "", text, flags=re.MULTILINE | re.IGNORECASE)
-
-    # Corregir si el modelo omitió el nombre del locutor ("Soy y en los próximos...")
-    text = re.sub(r"\bSoy\s+y\s+en\s+los\s+próximos\b", "Soy Ramiro y en los próximos", text, flags=re.IGNORECASE)
+    # Corregir si el modelo omitió o usó presentación humana
+    text = re.sub(
+        r"\bSoy\s+(?:Ramiro\s+y\s+|y\s+)?en\s+los\s+próximos\b",
+        "Soy el bot de inteligencia artificial de Podcast de Linux al Sur y en los próximos",
+        text,
+        flags=re.IGNORECASE,
+    )
 
     # Cortar desde el saludo inicial típico en español rioplatense
     saludo_match = re.search(r"\b(¡?Hola\b|¡?Bienvenidos\b|¡?Muy buenas\b|Arrancamos\b)", text, re.IGNORECASE)
@@ -184,7 +186,8 @@ class ScriptGenerator:
             "La extensión debe ser de aproximadamente 1050 palabras (entre 1000 y 1150 palabras) para una locución fluida de exactamente 6 minutos.\n"
             "REGLAS CRÍTICAS DE ESTILO:\n"
             "- Idioma: 100% castellano rioplatense. ESTRICTAMENTE PROHIBIDO pensar o redactar en inglés, hacer conteos o notas intermedias.\n"
-            "- Presentate como Ramiro en la apertura dentro de Podcast de Linux al Sur.\n"
+            "- Identidad: Presentate como el bot de inteligencia artificial de Podcast de Linux al Sur (NO digas que sos locutor humano ni menciones a Ramiro).\n"
+            "- Sin comandos de terminal: PROHIBIDO dictar comandos de consola, flags o sintaxis difícil de escuchar; explicá conceptualmente las novedades en lenguaje hablado natural.\n"
             "- ESTRICTAMENTE PROHIBIDO usar la palabra 'che' en cualquier parte del guión (saludo, cuerpo o cierre).\n"
             "- Escribí DIRECTAMENTE en texto plano continuo lo que va a leer el locutor, sin notas previas, sin títulos de sección ni marcas tipo [MÚSICA].\n\n"
             f"{news_prompt_text}"
@@ -227,14 +230,14 @@ class ScriptGenerator:
                     f"El guión actual tiene {best_words} palabras. Por favor, expandí el desarrollo de las 4 líneas temáticas "
                     "(Kernel, Desktop/Distro, Aplicaciones Libres y Gaming), agregando más contexto técnico y ejemplos prácticos "
                     "para alcanzar aproximadamente 1050 palabras (6 minutos de duración). "
-                    "IMPORTANTE: 100% castellano rioplatense, sin notas ni palabras en inglés, sin usar 'che' y sin notas de conteo. Prosa continua exclusivamente:\n\n"
+                    "IMPORTANTE: 100% castellano rioplatense, sin comandos de consola, sin notas ni palabras en inglés, sin usar 'che' y sin notas de conteo. Prosa continua exclusivamente:\n\n"
                     f"{best_prose}"
                 )
             else:
                 adjustment_prompt = (
                     f"El guión actual tiene {best_words} palabras. Por favor, condensalo ligeramente para que tenga "
                     "aproximadamente 1050 palabras manteniendo las 4 líneas temáticas (Kernel, Desktop/Distro, Apps y Gaming). "
-                    "IMPORTANTE: 100% castellano rioplatense, sin notas ni palabras en inglés, sin usar 'che' y sin notas de conteo. Prosa continua exclusivamente:\n\n"
+                    "IMPORTANTE: 100% castellano rioplatense, sin comandos de consola, sin notas ni palabras en inglés, sin usar 'che' y sin notas de conteo. Prosa continua exclusivamente:\n\n"
                     f"{best_prose}"
                 )
 
