@@ -24,21 +24,6 @@
     </itunes:category>
     <itunes:explicit>false</itunes:explicit>
     <item>
-      <title>EP20260921 - Noticias de Software Libre de la Semana</title>
-      <itunes:title>Noticias de Software Libre de la Semana</itunes:title>
-      <itunes:episodeType>full</itunes:episodeType>
-      <description>
-
-#Linux #OpenSource #Kernel #Ubuntu #GamingOnLinux</description>
-      <itunes:summary />
-      <enclosure url="https://github.com/niunmango/podcast_noticias/releases/download/EP20260921/podcast_20260921_105708.mp3" length="10661934" type="audio/mpeg" />
-      <guid isPermaLink="false">https://github.com/niunmango/podcast_noticias/releases/tag/EP20260921</guid>
-      <pubDate>Mon, 21 Sep 2026 11:10:24 GMT</pubDate>
-      <itunes:duration>444</itunes:duration>
-      <itunes:image href="https://github.com/niunmango/podcast_noticias/releases/download/EP20260921/cover_20260921_105708.jpg" />
-      <itunes:explicit>false</itunes:explicit>
-    </item>
-    <item>
       <title>EP20260920 - Kernel 6.10.8: NVMe Prefetch, Btrfs 8TiB y gzip 1.15</title>
       <itunes:title>Kernel 6.10.8: NVMe Prefetch, Btrfs 8TiB y gzip 1.15</itunes:title>
       <itunes:episodeType>full</itunes:episodeType>
