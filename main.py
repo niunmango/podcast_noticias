@@ -106,11 +106,6 @@ def run_pipeline(
         sample_rate=audio_cfg.get("sample_rate", 44100),
         bitrate=audio_cfg.get("bitrate", "192k"),
         trim_silence=audio_cfg.get("trim_silence", False),
-        denoise=audio_cfg.get("denoise", True),
-        denoise_filter=audio_cfg.get(
-            "denoise_filter",
-            "highpass=f=80,lowpass=f=12000,adeclick,afftdn=nr=12:nf=-40:tn=1",
-        ),
     )
 
     txt_file: Optional[Path] = None

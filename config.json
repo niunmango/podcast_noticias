@@ -36,8 +36,6 @@
     "sample_rate": 44100,
     "bitrate": "192k",
     "trim_silence": false,
-    "denoise": true,
-    "denoise_filter": "highpass=f=80,lowpass=f=12000,adeclick,afftdn=nr=12:nf=-40:tn=1",
     "background_music": "assets/background.mp3",
     "background_volume": 0.08
   },
