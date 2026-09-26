@@ -144,8 +144,8 @@ def run_pipeline(
 
         news_prompt = news_batch.to_formatted_prompt_text(max_items=12)
 
-        # FASE 2: GENERACIÓN DE GUIÓN CON LLM
-        console.print("\n[bold cyan]🤖 FASE 2: Redacción de Guión con LLM Local (.200)[/bold cyan]")
+        # FASE 2: GENERACIÓN MODULAR DE GUIÓN CON LLM
+        console.print("\n[bold cyan]🤖 FASE 2: Redacción Modular de Guión con LLM Local (.200)[/bold cyan]")
         llm_cfg = config.get("llm", {})
         sys_prompt_rel = config.get("paths", {}).get("system_prompt", "prompts/system_prompt.txt")
         sys_prompt_file = base_dir / sys_prompt_rel
@@ -154,19 +154,37 @@ def run_pipeline(
             base_url=llm_cfg.get("base_url", "http://192.168.1.200:20128/v1"),
             api_key=llm_cfg.get("api_key", "sk-625c35c6ebef3fea-bhqllm-9dad3943"),
             model=llm_cfg.get("model", "hermes-rotator"),
-            temperature=llm_cfg.get("temperature", 0.7),
+            temperature=llm_cfg.get("temperature", 0.2),
             system_prompt_path=sys_prompt_file,
             target_words_min=llm_cfg.get("target_words_min", 1000),
-            target_words_max=llm_cfg.get("target_words_max", 1150),
+            target_words_max=llm_cfg.get("target_words_max", 1200),
         )
 
-        script_res = generator.generate_script(news_prompt)
+        script_res = generator.generate_script(news_batch)
         txt_file, md_file = generator.save_script(
             script_res,
             scripts_out_dir,
             base_name=f"podcast_{timestamp_str}",
         )
         console.print(f"💾 [green]Guión guardado exitosamente en:[/green]\n  • TXT: {txt_file}\n  • MD:  {md_file}")
+
+        # Desglose de las 6 secciones
+        sec_table = Table(title="Estructura del Guión Modular (6 Secciones)", border_style="cyan")
+        sec_table.add_column("Sección", style="cyan")
+        sec_table.add_column("Palabras", style="magenta")
+        sec_table.add_column("Límite / Meta", style="green")
+        sec_limits = {
+            "intro": "Máx 200 (~120-150)",
+            "kernel": "~220-250",
+            "distros": "~220-250",
+            "apps": "~220-250",
+            "gaming": "Máx 200 (~160-190)",
+            "outro": "Máx 200 (~80-120)",
+        }
+        for s_k in ["intro", "kernel", "distros", "apps", "gaming", "outro"]:
+            sec_table.add_row(s_k.capitalize(), str(script_res.section_word_counts.get(s_k, 0)), sec_limits[s_k])
+        sec_table.add_row("TOTAL", str(script_res.word_count), "1000 - 1200 palabras", style="bold yellow")
+        console.print(sec_table)
 
     covers_out_dir = base_dir / config.get("paths", {}).get("output_covers", "output/covers")
     meta_out_dir = base_dir / config.get("paths", {}).get("output_metadata", "output/metadata")

@@ -99,6 +99,14 @@ class NewsBatch(BaseModel):
 
         return cats
 
+    def get_category_snippets(self, category_key: str, max_items: int = 3) -> str:
+        """Devuelve las noticias formateadas para el prompt de una categoría específica."""
+        cats = self.categorize_items()
+        items = cats.get(category_key, [])[:max_items]
+        if not items:
+            return "No se encontraron noticias específicas en este periodo para este bloque."
+        return "\n\n".join(f"{i+1}. {it.to_snippet()}" for i, it in enumerate(items))
+
     def to_formatted_prompt_text(self, items_per_category: int = 3, max_items: Optional[int] = None) -> str:
         """Formatea las noticias agrupadas obligatoriamente en las 4 líneas temáticas requeridas."""
         if not self.items:
